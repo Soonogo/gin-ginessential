@@ -6,7 +6,6 @@ import (
 )
 
 func main() {
-	print("2")
 	db := common.InitDB()
 	println(db, "22")
 
