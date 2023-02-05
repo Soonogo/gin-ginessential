@@ -2,7 +2,9 @@ package controller
 
 import (
 	"aaa/common"
+	"aaa/dto"
 	"aaa/model"
+	"aaa/response"
 	"aaa/util"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
@@ -17,11 +19,12 @@ func Register(c *gin.Context) {
 	telephone := c.PostForm("telephone")
 	password := c.PostForm("password")
 	if len(telephone) != 11 {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "msg": "no 11 number"})
+		response.Response(c, http.StatusUnprocessableEntity, 422, nil, "no 11 number")
+
 		return
 	}
 	if len(password) < 6 {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "msg": "password too short"})
+		response.Response(c, http.StatusUnprocessableEntity, 422, nil, "password too short")
 		return
 	}
 	if len(name) == 0 {
@@ -29,13 +32,13 @@ func Register(c *gin.Context) {
 	}
 
 	if isTelephoneExit(db, telephone) {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "msg": "User is Already"})
+		response.Response(c, http.StatusUnprocessableEntity, 422, nil, "User is Already")
 		return
 	}
 
 	hasedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"code": 500, "msg": "encryption error"})
+		response.Response(c, http.StatusUnprocessableEntity, 422, nil, "encryption error")
 		return
 	}
 	newUser := &model.User{
@@ -46,10 +49,8 @@ func Register(c *gin.Context) {
 
 	db.Create(&newUser)
 	log.Println(name, telephone, password)
-	c.JSON(http.StatusOK, gin.H{
-		"code":    "200",
-		"message": "Sign In Successful",
-	})
+	response.Success(c, nil, "Sign In Successful")
+
 }
 
 func Login(c *gin.Context) {
@@ -57,21 +58,21 @@ func Login(c *gin.Context) {
 	telephone := c.PostForm("telephone")
 	password := c.PostForm("password")
 	if len(telephone) != 11 {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "msg": "no 11 number"})
+		response.Response(c, http.StatusUnprocessableEntity, 422, nil, "no 11 number")
 		return
 	}
 	if len(password) < 6 {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "msg": "password too short"})
+		response.Response(c, http.StatusUnprocessableEntity, 422, nil, "password too short")
 		return
 	}
 	var user model.User
 	db.Where("telephone = ?", telephone).First(&user)
 	if user.Id == 0 {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{"code": 422, "msg": "User not register"})
+		response.Response(c, http.StatusUnprocessableEntity, 422, nil, "User not register")
 		return
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"code": "400", "msg": "password error"})
+		response.Response(c, http.StatusUnprocessableEntity, 422, nil, "password error")
 		return
 	}
 	token, err := common.ReleaseToken(user)
@@ -80,16 +81,13 @@ func Login(c *gin.Context) {
 		log.Println("token generate error : %v", err)
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"code":    "200",
-		"data":    gin.H{"token": token},
-		"message": "Login In Successful",
-	})
+
+	response.Success(c, gin.H{"token": token}, "Login In Successful")
 }
 
 func Info(ctx *gin.Context) {
 	user, _ := ctx.Get("user")
-	ctx.JSON(http.StatusOK, gin.H{"code": "200", "data": gin.H{"user": user}})
+	ctx.JSON(http.StatusOK, gin.H{"code": "200", "data": gin.H{"user": dto.ToUserParse(user.(model.User))}})
 	return
 }
 
