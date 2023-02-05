@@ -74,12 +74,23 @@ func Login(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"code": "400", "msg": "password error"})
 		return
 	}
-	token := "123"
+	token, err := common.ReleaseToken(user)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"code": "500", "msg": "system error"})
+		log.Println("token generate error : %v", err)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"code":    "200",
 		"data":    gin.H{"token": token},
 		"message": "Login In Successful",
 	})
+}
+
+func Info(ctx *gin.Context) {
+	user, _ := ctx.Get("user")
+	ctx.JSON(http.StatusOK, gin.H{"code": "200", "data": gin.H{"user": user}})
+	return
 }
 
 func isTelephoneExit(db *gorm.DB, telephone string) bool {
